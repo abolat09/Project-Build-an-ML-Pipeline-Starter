@@ -1,77 +1,106 @@
+"""
+This script downloads a dataset, performs basic cleaning,
+and logs the cleaned dataset as a W&B artifact.
+"""
 import argparse
-from typing import Any
-
+import logging
 import pandas as pd
 import wandb
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def go(
-    input_artifact: str,
-    output_artifact: str,
-    output_type: str,
-    output_description: str,
-    min_price: float,
-    max_price: float,
-) -> None:
+def go(args):
     """
-    This is the basic cleaning step.
-    1.) We download the input CSV from W&B
-    2.) We keep only rows with price between min_price and max_price
-    3.) Finally we upload the cleaned CSV back to W&B as a new artifact
+    Main function to execute the data cleaning and logging process.
+
+    :param args: argparse.Namespace, containing the script's command-line arguments.
     """
+    run = wandb.init(job_type="basic_cleaning")
 
-    run = wandb.init(
-    project="nyc_airbnb",
-    job_type="basic_cleaning")
-
-
-    run.config["input_artifact"] = input_artifact
-    run.config["output_artifact"] = output_artifact
-    run.config["min_price"] = min_price
-    run.config["max_price"] = max_price
-
-    artifact = run.use_artifact(input_artifact)
+    logging.info("Downloading artifact: %s", args.input_artifact)
+    artifact = run.use_artifact(args.input_artifact)
     artifact_path = artifact.file()
 
+    logging.info("Loading artifact into pandas DataFrame...")
     df = pd.read_csv(artifact_path)
 
-    df = df[df["price"].between(min_price, max_price)].copy()
+    logging.info("Dropping rows with missing values...")
+    df.dropna(subset=[args.col_to_clean1, args.col_to_clean2], inplace=True)
 
-    # Here I'm saving the data
-    df.to_csv(output_artifact, index=False)
+    logging.info("Filtering by price range: %s to %s", args.min_price, args.max_price)
+    df = df[(df['price'] >= args.min_price) & (df['price'] <= args.max_price)]
+    
+    logging.info("Filtering by geographic boundaries...")
+    df = df[
+        (df['longitude'] >= -74.25) & (df['longitude'] <= -73.50) &
+        (df['latitude'] >= 40.5) & (df['latitude'] <= 41.2)
+    ]
 
-    # Now I will log cleaned artifact to W&B
-    cleaned = wandb.Artifact(
-        name=output_artifact,
-        type=output_type,
-        description=output_description,
+    df.to_csv("clean_data.csv", index=False)
+
+    logging.info("Logging cleaned data artifact: %s", args.output_artifact)
+    artifact = wandb.Artifact(
+        name=args.output_artifact,
+        type=args.output_type,
+        description=args.output_description,
     )
-    cleaned.add_file(output_artifact)
-    run.log_artifact(cleaned)
+    artifact.add_file("clean_data.csv")
+    run.log_artifact(artifact)
 
-    run.finish()
-
-
-def parse_args() -> Any:
-    parser = argparse.ArgumentParser(description="Basic data cleaning")
-
-    parser.add_argument("--input_artifact", type=str, required=True)
-    parser.add_argument("--output_artifact", type=str, required=True)
-    parser.add_argument("--output_type", type=str, required=True)
-    parser.add_argument("--output_description", type=str, required=True)
-    parser.add_argument("--min_price", type=float, required=True)
-    parser.add_argument("--max_price", type=float, required=True)
-
-    return parser.parse_args()
-
+    logging.info("Basic cleaning step finished.")
 
 if __name__ == "__main__":
-    args = parse_args()
-    go(
-        input_artifact=args.input_artifact,
-        output_artifact=args.output_artifact,
-        output_type=args.output_type,
-        output_description=args.output_description,
-        min_price=args.min_price,
-        max_price=args.max_price,
+    parser = argparse.ArgumentParser(description="Perform basic cleaning on the raw data.")
+
+    parser.add_argument(
+        "--input_artifact", 
+        type=str, 
+        help="Name of the input artifact (raw data)", 
+        required=True
     )
+    parser.add_argument(
+        "--output_artifact", 
+        type=str, 
+        help="Name for the output artifact (cleaned data)", 
+        required=True
+    )
+    parser.add_argument(
+        "--output_type", 
+        type=str, 
+        help="Type of the output artifact", 
+        required=True
+    )
+    parser.add_argument(
+        "--output_description", 
+        type=str, 
+        help="Description for the output artifact", 
+        required=True
+    )
+    parser.add_argument(
+        "--col_to_clean1", 
+        type=str, 
+        help="First column to drop NaNs from", 
+        required=True
+    )
+    parser.add_argument(
+        "--col_to_clean2", 
+        type=str, 
+        help="Second column to drop NaNs from", 
+        required=True
+    )
+    parser.add_argument(
+        "--min_price", 
+        type=float, 
+        help="Minimum price to keep", 
+        required=True
+    )
+    parser.add_argument(
+        "--max_price", 
+        type=float, 
+        help="Maximum price to keep", 
+        required=True
+    )
+
+    args = parser.parse_args()
+    go(args)

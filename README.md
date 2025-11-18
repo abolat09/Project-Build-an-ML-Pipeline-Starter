@@ -1,3 +1,6 @@
+* **My GitHub Repository:** https://github.com/[abolat09]/Project-Build-an-ML-Pipeline-Starter
+* **My W&B Project:** https://wandb.ai/ahmetbolat09/nyc_airbnb
+
 # Build an ML Pipeline for Short-Term Rental Prices in NYC
 You are working for a property management company renting rooms and properties for short periods of 
 time on various rental platforms. You need to estimate the typical price for a given property based 
@@ -181,8 +184,3 @@ Please, make sure all steps are using **the same** python version and that you h
 [License](LICENSE.txt)
 
 
-## Weights & Biases project
-
-All the runs and artifacts for this project can be  tracked from the link below:
-
-https://wandb.ai/ahmetbolat09-western-governors-university/nyc_airbnb
