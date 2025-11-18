@@ -31,11 +31,11 @@ def go(args):
     logging.info("Filtering by price range: %s to %s", args.min_price, args.max_price)
     df = df[(df['price'] >= args.min_price) & (df['price'] <= args.max_price)]
     
-    #logging.info("Filtering by geographic boundaries...")
-    #df = df[
-        #(df['longitude'] >= -74.25) & (df['longitude'] <= -73.50) &
-        #(df['latitude'] >= 40.5) & (df['latitude'] <= 41.2)
-    #]
+    logging.info("Filtering by geographic boundaries...")
+    df = df[
+        (df['longitude'] >= -74.25) & (df['longitude'] <= -73.50) &
+        (df['latitude'] >= 40.5) & (df['latitude'] <= 41.2)
+    ]
 
     df.to_csv("clean_data.csv", index=False)
 
